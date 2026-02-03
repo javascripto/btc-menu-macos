@@ -55,6 +55,9 @@ class BTCMenuBarApp(rumps.App):
             rumps.MenuItem("Sair", callback=rumps.quit_application),
         ]
 
+        self.update_timer = rumps.Timer(self.update_price, 60)
+        self.update_timer.start()
+
         if self.api_key:
             self.update_currency_check()
             self.update_price(force=True)
@@ -87,7 +90,7 @@ class BTCMenuBarApp(rumps.App):
             log("UPDATE", "Atualização forçada")
         else:
             log("UPDATE", "Atualização automática")
-        if not force and now - self.last_fetch_ts < 30:
+        if not force and now - self.last_fetch_ts < 60:
             log("COOLDOWN", "Ignorando chamada (cooldown ativo)")
             return
         try:
