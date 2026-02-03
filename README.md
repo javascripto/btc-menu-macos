@@ -2,6 +2,11 @@
 
 Menu bar app para acompanhar o preço do BTC usando a API da CoinMarketCap.
 
+| Preview |
+| --- |
+| ![BTCMenu](https://github.com/user-attachments/assets/ea08ed97-00ef-46ee-a2eb-02b0d888bd30) |
+
+
 ## Requisitos
 - macOS
 - Python 3.9+ (recomendado 3.11)
