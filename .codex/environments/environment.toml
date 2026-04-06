@@ -12,6 +12,7 @@ command = "make run"
 
 [[actions]]
 name = "Debug Logs"
+icon = "debug"
 command = "make debug-logs"
 
 [[actions]]
