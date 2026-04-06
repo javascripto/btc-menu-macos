@@ -2,6 +2,8 @@
 
 Menu bar app nativo para macOS, feito em Swift + AppKit, para acompanhar o preço do BTC.
 
+![Ícone do BTCMenu](./assets/BTCMenu-icon.png)
+
 ## O que o app faz
 
 - mostra o preço atual do BTC direto na menu bar
