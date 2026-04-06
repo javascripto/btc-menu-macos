@@ -1,8 +1,10 @@
 # BTCMenu
 
+[![Release Workflow](https://github.com/javascripto/btc-menu-macos/actions/workflows/release.yml/badge.svg)](https://github.com/javascripto/btc-menu-macos/actions/workflows/release.yml)
+
 Menu bar app nativo para macOS, feito em Swift + AppKit, para acompanhar o preço do BTC.
 
-![Ícone do BTCMenu](./assets/BTCMenu-icon.png)
+<img src="./assets/BTCMenu-icon.png" alt="BTCMenu" width="200" />
 
 ## O que o app faz
 
