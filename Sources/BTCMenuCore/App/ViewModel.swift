@@ -9,10 +9,12 @@ final class BTCMenuViewModel {
     var alertConfig: AlertConfiguration { preferences.alertConfiguration }
     var priceSourcePreference: PriceSourcePreference { preferences.priceSourcePreference }
     var lastErrorDetails: ErrorDetails? { storedLastErrorDetails }
+    var launchesAtLogin: Bool { launchAtLoginController.launchesAtLogin }
 
     private let preferences: AppPreferences
     private let client: BTCQuoteClient
     private let alertService: AlertServicing
+    private let launchAtLoginController: LaunchAtLoginControlling
 
     private var currency: Currency
     private var lastPrice: Double?
@@ -30,11 +32,13 @@ final class BTCMenuViewModel {
     init(
         preferences: AppPreferences = AppPreferences(),
         client: BTCQuoteClient = LiveBTCQuoteClient(),
-        alertService: AlertServicing = AlertService()
+        alertService: AlertServicing = AlertService(),
+        launchAtLoginController: LaunchAtLoginControlling = LaunchAtLoginController()
     ) {
         self.preferences = preferences
         self.client = client
         self.alertService = alertService
+        self.launchAtLoginController = launchAtLoginController
         self.currency = preferences.currency
     }
 
@@ -66,6 +70,11 @@ final class BTCMenuViewModel {
 
     func setAlertConfig(_ config: AlertConfiguration) {
         preferences.alertConfiguration = config
+        emitState()
+    }
+
+    func setLaunchAtLogin(_ isEnabled: Bool) {
+        launchAtLoginController.setLaunchesAtLogin(isEnabled)
         emitState()
     }
 
@@ -207,6 +216,7 @@ final class BTCMenuViewModel {
             statusTitle: statusTitle,
             priceMovement: priceMovement,
             currency: currency,
+            launchesAtLogin: launchAtLoginController.launchesAtLogin,
             lastUpdateDescription: lastUpdateDescription,
             change24hDescription: change24hDescription,
             volumeDescription: volumeDescription,

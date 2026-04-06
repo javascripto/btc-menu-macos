@@ -28,6 +28,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             onConfigureAPIKey: { [weak self] in
                 self?.openAPIKeyPrompt()
             },
+            onToggleLaunchAtLogin: { [viewModel] in
+                viewModel.setLaunchAtLogin(!viewModel.launchesAtLogin)
+            },
             onShowLastError: { [weak self] in
                 self?.showLastError()
             },

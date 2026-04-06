@@ -21,6 +21,7 @@ let package = Package(
             name: "BTCMenuCore",
             linkerSettings: [
                 .linkedFramework("UserNotifications"),
+                .linkedFramework("ServiceManagement"),
             ]
         ),
         .executableTarget(

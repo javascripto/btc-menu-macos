@@ -7,6 +7,7 @@ final class BTCStatusItemController: NSObject {
     private let onSelectCurrency: (Currency) -> Void
     private let onConfigureAlert: () -> Void
     private let onConfigureAPIKey: () -> Void
+    private let onToggleLaunchAtLogin: () -> Void
     private let onShowLastError: () -> Void
     private let onQuit: () -> Void
 
@@ -23,6 +24,7 @@ final class BTCStatusItemController: NSObject {
     private let brlItem = NSMenuItem()
     private let alertItem = NSMenuItem()
     private let apiKeyItem = NSMenuItem()
+    private let launchAtLoginItem = NSMenuItem()
     private let quitItem = NSMenuItem()
 
     init(
@@ -31,6 +33,7 @@ final class BTCStatusItemController: NSObject {
         onSelectCurrency: @escaping (Currency) -> Void,
         onConfigureAlert: @escaping () -> Void,
         onConfigureAPIKey: @escaping () -> Void,
+        onToggleLaunchAtLogin: @escaping () -> Void,
         onShowLastError: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) {
@@ -39,6 +42,7 @@ final class BTCStatusItemController: NSObject {
         self.onSelectCurrency = onSelectCurrency
         self.onConfigureAlert = onConfigureAlert
         self.onConfigureAPIKey = onConfigureAPIKey
+        self.onToggleLaunchAtLogin = onToggleLaunchAtLogin
         self.onShowLastError = onShowLastError
         self.onQuit = onQuit
         super.init()
@@ -59,6 +63,8 @@ final class BTCStatusItemController: NSObject {
         brlItem.state = state.currency == .brl ? .on : .off
         alertItem.title = state.alertTitle
         apiKeyItem.title = state.apiKeyTitle
+        launchAtLoginItem.title = state.launchAtLoginTitle
+        launchAtLoginItem.state = state.launchesAtLogin ? .on : .off
     }
 
     private func configure() {
@@ -96,6 +102,9 @@ final class BTCStatusItemController: NSObject {
         apiKeyItem.target = self
         apiKeyItem.action = #selector(handleAPIKey)
 
+        launchAtLoginItem.target = self
+        launchAtLoginItem.action = #selector(handleLaunchAtLogin)
+
         errorItem.target = self
         errorItem.action = #selector(handleShowLastError)
 
@@ -117,6 +126,7 @@ final class BTCStatusItemController: NSObject {
             currencyMenuItem,
             alertItem,
             apiKeyItem,
+            launchAtLoginItem,
             .separator(),
             quitItem,
         ]
@@ -136,6 +146,9 @@ final class BTCStatusItemController: NSObject {
 
     @objc
     private func handleAPIKey() { onConfigureAPIKey() }
+
+    @objc
+    private func handleLaunchAtLogin() { onToggleLaunchAtLogin() }
 
     @objc
     private func handleShowLastError() { onShowLastError() }

@@ -10,6 +10,7 @@ struct BTCMenuState {
     let statusTitle: String
     let priceMovement: PriceMovement
     let currency: Currency
+    let launchesAtLogin: Bool
     let lastUpdateDescription: String
     let change24hDescription: String
     let volumeDescription: String
@@ -25,6 +26,10 @@ struct BTCMenuState {
 
     var apiKeyTitle: String {
         apiKeyConfigured ? "Atualizar API Key da CoinMarketCap" : "Definir API Key da CoinMarketCap"
+    }
+
+    var launchAtLoginTitle: String {
+        "Iniciar com o macOS"
     }
 
     var errorTitle: String {
