@@ -1,4 +1,0 @@
-rumps
-requests
-pyobjc
-py2app

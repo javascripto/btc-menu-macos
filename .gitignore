@@ -1,12 +1,5 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
-.Python
 build/
 dist/
-.eggs/
 .DS_Store
 *.swp
 *.swo
@@ -16,3 +9,5 @@ dist/
 .env.*
 *.icns
 assets/*.iconset/
+.build/
+DerivedData/
