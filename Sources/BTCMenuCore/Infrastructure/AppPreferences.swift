@@ -70,6 +70,10 @@ final class AppPreferences {
         static let currency = "currency"
         static let apiKey = "api_key"
         static let priceSourcePreference = "price_source_preference"
+        static let showDollarRate = "show_dollar_rate"
+        static let showBitcoinUSD = "show_bitcoin_usd"
+        static let showBitcoinBRL = "show_bitcoin_brl"
+        static let showBitcoinCents = "show_bitcoin_cents"
         static let alertEnabled = "alert_enabled"
         static let alertType = "alert_type"
         static let alertPriceDirection = "alert_price_direction"
@@ -91,6 +95,36 @@ final class AppPreferences {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: Keys.currency)
+        }
+    }
+
+    var displayOptions: DisplayOptions {
+        get {
+            let hasDisplayKeys =
+                userDefaults.object(forKey: Keys.showDollarRate) != nil ||
+                userDefaults.object(forKey: Keys.showBitcoinUSD) != nil ||
+                userDefaults.object(forKey: Keys.showBitcoinBRL) != nil
+
+            guard hasDisplayKeys else {
+                if currency == .brl {
+                    return DisplayOptions(showDollarRate: false, showBitcoinUSD: false, showBitcoinBRL: true, showBitcoinCents: false)
+                }
+
+                return .default
+            }
+
+            return DisplayOptions(
+                showDollarRate: userDefaults.bool(forKey: Keys.showDollarRate),
+                showBitcoinUSD: userDefaults.bool(forKey: Keys.showBitcoinUSD),
+                showBitcoinBRL: userDefaults.bool(forKey: Keys.showBitcoinBRL),
+                showBitcoinCents: userDefaults.bool(forKey: Keys.showBitcoinCents)
+            )
+        }
+        set {
+            userDefaults.set(newValue.showDollarRate, forKey: Keys.showDollarRate)
+            userDefaults.set(newValue.showBitcoinUSD, forKey: Keys.showBitcoinUSD)
+            userDefaults.set(newValue.showBitcoinBRL, forKey: Keys.showBitcoinBRL)
+            userDefaults.set(newValue.showBitcoinCents, forKey: Keys.showBitcoinCents)
         }
     }
 

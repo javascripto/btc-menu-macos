@@ -4,14 +4,27 @@ enum PriceMovement {
     case up
     case down
     case unchanged
+
+    var symbol: String {
+        switch self {
+        case .up:
+            return "↑"
+        case .down:
+            return "↓"
+        case .unchanged:
+            return "→"
+        }
+    }
 }
 
 struct BTCMenuState {
     let statusTitle: String
-    let priceMovement: PriceMovement
-    let currency: Currency
+    let quoteMovements: QuoteMovements
+    let displayOptions: DisplayOptions
     let launchesAtLogin: Bool
     let lastUpdateDescription: String
+    let change1hDescription: String
+    let change3hDescription: String
     let change24hDescription: String
     let volumeDescription: String
     let priceSourceDescription: String

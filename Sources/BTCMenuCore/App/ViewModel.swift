@@ -7,6 +7,7 @@ final class BTCMenuViewModel {
 
     var apiKey: String { preferences.apiKey }
     var alertConfig: AlertConfiguration { preferences.alertConfiguration }
+    var displayOptions: DisplayOptions { currentDisplayOptions }
     var priceSourcePreference: PriceSourcePreference { preferences.priceSourcePreference }
     var lastErrorDetails: ErrorDetails? { storedLastErrorDetails }
     var launchesAtLogin: Bool { launchAtLoginController.launchesAtLogin }
@@ -16,17 +17,21 @@ final class BTCMenuViewModel {
     private let alertService: AlertServicing
     private let launchAtLoginController: LaunchAtLoginControlling
 
-    private var currency: Currency
-    private var lastPrice: Double?
-    private var change24h: Double?
+    private var currentDisplayOptions: DisplayOptions
+    private var latestSnapshot: QuoteSnapshot?
+    private var previousBTCUSD: Double?
+    private var previousBTCBRL: Double?
+    private var previousUSDBRL: Double?
     private var lastFetchDate: Date?
     private var lastUpdateDescription = "Última atualização: --:--"
+    private var change1hDescription = "Variação 1h: --"
+    private var change3hDescription = "Variação 3h: --"
     private var change24hDescription = "Variação 24h: --"
     private var volumeDescription = "Volume 24h: --"
     private var lastErrorDescription: String?
     private var storedLastErrorDetails: ErrorDetails?
-    private var statusTitle = "₿ --"
-    private var priceMovement: PriceMovement = .unchanged
+    private var statusTitle = "--"
+    private var quoteMovements = QuoteMovements(btcUSD: .unchanged, btcBRL: .unchanged, usdBRL: .unchanged)
     private var isFetching = false
 
     init(
@@ -39,7 +44,7 @@ final class BTCMenuViewModel {
         self.client = client
         self.alertService = alertService
         self.launchAtLoginController = launchAtLoginController
-        self.currency = preferences.currency
+        self.currentDisplayOptions = preferences.displayOptions
     }
 
     func start() async {
@@ -50,10 +55,11 @@ final class BTCMenuViewModel {
         onStateChange?(makeState())
     }
 
-    func setCurrency(_ currency: Currency) async {
-        guard self.currency != currency else { return }
-        self.currency = currency
-        preferences.currency = currency
+    func setDisplayOptions(_ displayOptions: DisplayOptions) async {
+        guard currentDisplayOptions != displayOptions else { return }
+        currentDisplayOptions = displayOptions
+        preferences.displayOptions = displayOptions
+        rebuildStatusTitle()
         emitState()
         await updatePrice(force: true)
     }
@@ -90,14 +96,13 @@ final class BTCMenuViewModel {
         }
         isFetching = true
         if force {
-            statusTitle = "₿ ..."
+            statusTitle = latestSnapshot == nil ? "--" : statusTitle
             emitState()
         }
 
         do {
-            let quote = try await client.fetchBTCQuote(
+            let quote = try await client.fetchQuoteSnapshot(
                 apiKey: apiKey.isEmpty ? nil : apiKey,
-                currency: currency,
                 preference: priceSourcePreference
             )
             apply(quote: quote)
@@ -107,7 +112,7 @@ final class BTCMenuViewModel {
             lastErrorDescription = debugDescription
             storedLastErrorDetails = details
             AppLogger.pricing.error("Price update failed: \(debugDescription, privacy: .public)")
-            statusTitle = "₿ erro"
+            rebuildStatusTitle()
             emitState()
         }
 
@@ -118,42 +123,34 @@ final class BTCMenuViewModel {
         NSApplication.shared.terminate(nil)
     }
 
-    private func apply(quote: BTCQuote) {
-        let previousPrice = lastPrice
-        lastPrice = quote.price
-        change24h = quote.percentChange24h
+    private func apply(quote: QuoteSnapshot) {
+        let previousPrice = latestSnapshot?.primaryBTCQuote().price
+        latestSnapshot = quote
         lastFetchDate = Date()
+        quoteMovements = QuoteMovements(
+            btcUSD: Self.movement(for: quote.btcUSD, previous: previousBTCUSD),
+            btcBRL: Self.movement(for: quote.btcBRL, previous: previousBTCBRL),
+            usdBRL: Self.movement(for: quote.usdBRL, previous: previousUSDBRL, roundedTo: 2)
+        )
+        previousBTCUSD = quote.btcUSD
+        previousBTCBRL = quote.btcBRL
+        previousUSDBRL = quote.usdBRL
 
-        let symbol = currency.symbol
-        let movementSymbol: String
-        if let previousPrice {
-            if quote.price > previousPrice {
-                priceMovement = .up
-                movementSymbol = "↑"
-            } else if quote.price < previousPrice {
-                priceMovement = .down
-                movementSymbol = "↓"
-            } else {
-                priceMovement = .unchanged
-                movementSymbol = "→"
-            }
-        } else {
-            priceMovement = .unchanged
-            movementSymbol = "→"
-        }
-
-        statusTitle = "\(movementSymbol) ₿ \(symbol)\(Formatting.compactPrice(quote.price))"
-        change24hDescription = "Variação 24h: \(Formatting.change(quote.percentChange24h))"
-        volumeDescription = "Volume 24h: \(symbol)\(Formatting.volume(quote.volume24h))"
+        let primaryQuote = quote.primaryBTCQuote()
+        statusTitle = StatusTitleBuilder.build(snapshot: quote, options: currentDisplayOptions, movements: quoteMovements)
+        change1hDescription = "Variação 1h: \(Formatting.change(primaryQuote.percentChange1h))"
+        change3hDescription = "Variação 3h: \(Formatting.change(primaryQuote.percentChange3h))"
+        change24hDescription = "Variação 24h: \(Formatting.change(primaryQuote.percentChange24h))"
+        volumeDescription = "Volume 24h: $\(Formatting.volume(quote.btcUSDVolume24h))"
         lastUpdateDescription = "Última atualização: \(Formatting.time(Date()))"
         lastErrorDescription = nil
         storedLastErrorDetails = nil
 
         emitState()
-        checkAlerts(quote: quote, previousPrice: previousPrice)
+        checkAlerts(quote: primaryQuote, previousPrice: previousPrice)
     }
 
-    private func checkAlerts(quote: BTCQuote, previousPrice: Double?) {
+    private func checkAlerts(quote: PrimaryBTCQuote, previousPrice: Double?) {
         let config = preferences.alertConfiguration
         guard config.enabled else { return }
 
@@ -173,7 +170,7 @@ final class BTCMenuViewModel {
             let arrow = config.priceDirection == .above ? "↑" : "↓"
             alertService.notify(
                 title: "BTCMenu",
-                message: "Alerta de preço \(arrow): \(String(format: "%.2f", quote.price)) \(currency.rawValue.uppercased())"
+                message: "Alerta de preço \(arrow): \(String(format: "%.2f", quote.price)) \(quote.currency.rawValue.uppercased())"
             )
             alertService.beep()
 
@@ -214,10 +211,12 @@ final class BTCMenuViewModel {
     private func makeState() -> BTCMenuState {
         BTCMenuState(
             statusTitle: statusTitle,
-            priceMovement: priceMovement,
-            currency: currency,
+            quoteMovements: quoteMovements,
+            displayOptions: currentDisplayOptions,
             launchesAtLogin: launchAtLoginController.launchesAtLogin,
             lastUpdateDescription: lastUpdateDescription,
+            change1hDescription: change1hDescription,
+            change3hDescription: change3hDescription,
             change24hDescription: change24hDescription,
             volumeDescription: volumeDescription,
             priceSourceDescription: "Fonte de preco: \(priceSourcePreference.title)",
@@ -226,6 +225,29 @@ final class BTCMenuViewModel {
             apiKeyConfigured: !apiKey.isEmpty,
             alertEnabled: alertConfig.enabled
         )
+    }
+
+    private func rebuildStatusTitle() {
+        statusTitle = StatusTitleBuilder.build(snapshot: latestSnapshot, options: currentDisplayOptions, movements: quoteMovements)
+    }
+
+    private static func movement(for value: Double, previous: Double?, roundedTo decimalPlaces: Int? = nil) -> PriceMovement {
+        guard let previous else { return .unchanged }
+        let currentValue: Double
+        let previousValue: Double
+
+        if let decimalPlaces {
+            let factor = pow(10.0, Double(decimalPlaces))
+            currentValue = (value * factor).rounded() / factor
+            previousValue = (previous * factor).rounded() / factor
+        } else {
+            currentValue = value
+            previousValue = previous
+        }
+
+        if currentValue > previousValue { return .up }
+        if currentValue < previousValue { return .down }
+        return .unchanged
     }
 
     private static func details(for error: Error) -> ErrorDetails {

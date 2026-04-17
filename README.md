@@ -9,12 +9,13 @@ Menu bar app nativo para macOS, feito em Swift + AppKit, para acompanhar o preç
 ## O que o app faz
 
 - mostra o preço atual do BTC direto na menu bar
-- alterna entre `USD` e `BRL`
+- mostra independentemente `BTC/USD`, `BTC/BRL` e `USD/BRL`
+- permite combinar múltiplas cotações ao mesmo tempo na menu bar
 - atualiza automaticamente a cada 60 segundos
 - permite atualização manual
 - usa uma API pública sem exigir configuração inicial
 - usa CoinMarketCap quando a API key estiver configurada
-- salva API key, moeda e alertas em `UserDefaults`
+- salva API key, opções de exibição e alertas em `UserDefaults`
 - dispara alertas por preço-alvo ou variação em `1h`, `3h` e `24h`
 
 ## Requisitos

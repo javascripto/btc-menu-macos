@@ -15,9 +15,13 @@ enum Formatting {
         decimalString(value, fractionDigits: 0)
     }
 
+    static func exchangeRate(_ value: Double) -> String {
+        decimalString(value, fractionDigits: 2)
+    }
+
     static func change(_ value: Double?) -> String {
         guard let value else { return "--" }
-        let indicator = value >= 0 ? "🟢" : "🔴"
+        let indicator = value > 0 ? "↑" : value < 0 ? "↓" : "→"
         return "\(indicator) \(String(format: "%.2f", value))%"
     }
 

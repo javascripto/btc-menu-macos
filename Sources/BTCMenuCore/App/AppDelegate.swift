@@ -19,8 +19,33 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             onManualUpdate: { [viewModel] in
                 Task { await viewModel.updatePrice(force: true) }
             },
-            onSelectCurrency: { [viewModel] currency in
-                Task { await viewModel.setCurrency(currency) }
+            onToggleDollarRate: { [viewModel] in
+                Task {
+                    var options = viewModel.displayOptions
+                    options.showDollarRate.toggle()
+                    await viewModel.setDisplayOptions(options)
+                }
+            },
+            onToggleBitcoinUSD: { [viewModel] in
+                Task {
+                    var options = viewModel.displayOptions
+                    options.showBitcoinUSD.toggle()
+                    await viewModel.setDisplayOptions(options)
+                }
+            },
+            onToggleBitcoinBRL: { [viewModel] in
+                Task {
+                    var options = viewModel.displayOptions
+                    options.showBitcoinBRL.toggle()
+                    await viewModel.setDisplayOptions(options)
+                }
+            },
+            onToggleBitcoinCents: { [viewModel] in
+                Task {
+                    var options = viewModel.displayOptions
+                    options.showBitcoinCents.toggle()
+                    await viewModel.setDisplayOptions(options)
+                }
             },
             onConfigureAlert: { [weak self] in
                 self?.openAlertConfiguration()

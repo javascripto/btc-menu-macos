@@ -4,7 +4,10 @@ import AppKit
 final class BTCStatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let onManualUpdate: () -> Void
-    private let onSelectCurrency: (Currency) -> Void
+    private let onToggleDollarRate: () -> Void
+    private let onToggleBitcoinUSD: () -> Void
+    private let onToggleBitcoinBRL: () -> Void
+    private let onToggleBitcoinCents: () -> Void
     private let onConfigureAlert: () -> Void
     private let onConfigureAPIKey: () -> Void
     private let onToggleLaunchAtLogin: () -> Void
@@ -14,14 +17,18 @@ final class BTCStatusItemController: NSObject {
     private let menu = NSMenu()
     private let manualUpdateItem = NSMenuItem()
     private let lastUpdateItem = NSMenuItem()
+    private let change1hItem = NSMenuItem()
+    private let change3hItem = NSMenuItem()
     private let change24hItem = NSMenuItem()
     private let volumeItem = NSMenuItem()
     private let sourceItem = NSMenuItem()
     private let errorItem = NSMenuItem()
-    private let currencyMenuItem = NSMenuItem(title: "Moeda", action: nil, keyEquivalent: "")
-    private let currencyMenu = NSMenu()
-    private let usdItem = NSMenuItem()
-    private let brlItem = NSMenuItem()
+    private let displayMenuItem = NSMenuItem(title: "Exibir", action: nil, keyEquivalent: "")
+    private let displayMenu = NSMenu()
+    private let dollarRateItem = NSMenuItem()
+    private let bitcoinUSDItem = NSMenuItem()
+    private let bitcoinBRLItem = NSMenuItem()
+    private let bitcoinCentsItem = NSMenuItem()
     private let alertItem = NSMenuItem()
     private let apiKeyItem = NSMenuItem()
     private let launchAtLoginItem = NSMenuItem()
@@ -30,7 +37,10 @@ final class BTCStatusItemController: NSObject {
     init(
         statusItem: NSStatusItem,
         onManualUpdate: @escaping () -> Void,
-        onSelectCurrency: @escaping (Currency) -> Void,
+        onToggleDollarRate: @escaping () -> Void,
+        onToggleBitcoinUSD: @escaping () -> Void,
+        onToggleBitcoinBRL: @escaping () -> Void,
+        onToggleBitcoinCents: @escaping () -> Void,
         onConfigureAlert: @escaping () -> Void,
         onConfigureAPIKey: @escaping () -> Void,
         onToggleLaunchAtLogin: @escaping () -> Void,
@@ -39,7 +49,10 @@ final class BTCStatusItemController: NSObject {
     ) {
         self.statusItem = statusItem
         self.onManualUpdate = onManualUpdate
-        self.onSelectCurrency = onSelectCurrency
+        self.onToggleDollarRate = onToggleDollarRate
+        self.onToggleBitcoinUSD = onToggleBitcoinUSD
+        self.onToggleBitcoinBRL = onToggleBitcoinBRL
+        self.onToggleBitcoinCents = onToggleBitcoinCents
         self.onConfigureAlert = onConfigureAlert
         self.onConfigureAPIKey = onConfigureAPIKey
         self.onToggleLaunchAtLogin = onToggleLaunchAtLogin
@@ -53,14 +66,18 @@ final class BTCStatusItemController: NSObject {
         applyStatusTitle(state: state)
         statusItem.button?.toolTip = state.statusTitle
         lastUpdateItem.title = state.lastUpdateDescription
-        change24hItem.title = state.change24hDescription
+        applyChangeTitle(change1hItem, title: state.change1hDescription)
+        applyChangeTitle(change3hItem, title: state.change3hDescription)
+        applyChangeTitle(change24hItem, title: state.change24hDescription)
         volumeItem.title = state.volumeDescription
         sourceItem.title = state.priceSourceDescription
         errorItem.title = state.errorTitle
         errorItem.toolTip = state.lastErrorDescription
         errorItem.isEnabled = state.hasErrorDetails
-        usdItem.state = state.currency == .usd ? .on : .off
-        brlItem.state = state.currency == .brl ? .on : .off
+        dollarRateItem.state = state.displayOptions.showDollarRate ? .on : .off
+        bitcoinUSDItem.state = state.displayOptions.showBitcoinUSD ? .on : .off
+        bitcoinBRLItem.state = state.displayOptions.showBitcoinBRL ? .on : .off
+        bitcoinCentsItem.state = state.displayOptions.showBitcoinCents ? .on : .off
         alertItem.title = state.alertTitle
         apiKeyItem.title = state.apiKeyTitle
         launchAtLoginItem.title = state.launchAtLoginTitle
@@ -74,6 +91,8 @@ final class BTCStatusItemController: NSObject {
         button.title = "₿ --"
 
         lastUpdateItem.isEnabled = false
+        change1hItem.isEnabled = false
+        change3hItem.isEnabled = false
         change24hItem.isEnabled = false
         volumeItem.isEnabled = false
         sourceItem.isEnabled = false
@@ -84,17 +103,25 @@ final class BTCStatusItemController: NSObject {
         manualUpdateItem.target = self
         manualUpdateItem.action = #selector(handleManualUpdate)
 
-        usdItem.title = "USD"
-        usdItem.target = self
-        usdItem.action = #selector(handleUSD)
+        dollarRateItem.title = "Cotação do dólar"
+        dollarRateItem.target = self
+        dollarRateItem.action = #selector(handleDollarRate)
 
-        brlItem.title = "BRL"
-        brlItem.target = self
-        brlItem.action = #selector(handleBRL)
+        bitcoinUSDItem.title = "Bitcoin em dólar"
+        bitcoinUSDItem.target = self
+        bitcoinUSDItem.action = #selector(handleBitcoinUSD)
 
-        currencyMenu.autoenablesItems = false
-        currencyMenu.items = [usdItem, brlItem]
-        currencyMenuItem.submenu = currencyMenu
+        bitcoinBRLItem.title = "Bitcoin em real"
+        bitcoinBRLItem.target = self
+        bitcoinBRLItem.action = #selector(handleBitcoinBRL)
+
+        bitcoinCentsItem.title = "Mostrar centavos do Bitcoin"
+        bitcoinCentsItem.target = self
+        bitcoinCentsItem.action = #selector(handleBitcoinCents)
+
+        displayMenu.autoenablesItems = false
+        displayMenu.items = [dollarRateItem, bitcoinUSDItem, bitcoinBRLItem, .separator(), bitcoinCentsItem]
+        displayMenuItem.submenu = displayMenu
 
         alertItem.target = self
         alertItem.action = #selector(handleAlert)
@@ -118,12 +145,14 @@ final class BTCStatusItemController: NSObject {
             manualUpdateItem,
             .separator(),
             lastUpdateItem,
+            change1hItem,
+            change3hItem,
             change24hItem,
             volumeItem,
             sourceItem,
             errorItem,
             .separator(),
-            currencyMenuItem,
+            displayMenuItem,
             alertItem,
             apiKeyItem,
             launchAtLoginItem,
@@ -136,10 +165,16 @@ final class BTCStatusItemController: NSObject {
     private func handleManualUpdate() { onManualUpdate() }
 
     @objc
-    private func handleUSD() { onSelectCurrency(.usd) }
+    private func handleDollarRate() { onToggleDollarRate() }
 
     @objc
-    private func handleBRL() { onSelectCurrency(.brl) }
+    private func handleBitcoinUSD() { onToggleBitcoinUSD() }
+
+    @objc
+    private func handleBitcoinBRL() { onToggleBitcoinBRL() }
+
+    @objc
+    private func handleBitcoinCents() { onToggleBitcoinCents() }
 
     @objc
     private func handleAlert() { onConfigureAlert() }
@@ -164,21 +199,47 @@ final class BTCStatusItemController: NSObject {
         let wholeRange = NSRange(location: 0, length: attributedTitle.length)
         attributedTitle.addAttribute(.foregroundColor, value: NSColor.labelColor, range: wholeRange)
 
-        if let firstCharacter = title.first {
-            let arrowColor: NSColor
-            switch state.priceMovement {
+        let movementBySymbol: [Character: PriceMovement] = [
+            "↑": .up,
+            "↓": .down,
+            "→": .unchanged,
+        ]
+
+        for (offset, character) in title.enumerated() {
+            guard let movement = movementBySymbol[character] else { continue }
+
+            let color: NSColor
+            switch movement {
             case .up:
-                arrowColor = .systemGreen
+                color = .systemGreen
             case .down:
-                arrowColor = .systemRed
+                color = .systemRed
             case .unchanged:
-                arrowColor = .labelColor
+                color = .labelColor
             }
 
-            let arrowLength = String(firstCharacter).utf16.count
-            attributedTitle.addAttribute(.foregroundColor, value: arrowColor, range: NSRange(location: 0, length: arrowLength))
+            let stringIndex = title.index(title.startIndex, offsetBy: offset)
+            let location = title[..<stringIndex].utf16.count
+            let length = String(character).utf16.count
+            attributedTitle.addAttribute(.foregroundColor, value: color, range: NSRange(location: location, length: length))
         }
 
         button.attributedTitle = attributedTitle
+    }
+
+    private func applyChangeTitle(_ item: NSMenuItem, title: String) {
+        let attributedTitle = NSMutableAttributedString(string: title)
+        let wholeRange = NSRange(location: 0, length: attributedTitle.length)
+        attributedTitle.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: wholeRange)
+
+        if let range = title.range(of: "↑") {
+            let nsRange = NSRange(range, in: title)
+            attributedTitle.addAttribute(.foregroundColor, value: NSColor.systemGreen, range: nsRange)
+        } else if let range = title.range(of: "↓") {
+            let nsRange = NSRange(range, in: title)
+            attributedTitle.addAttribute(.foregroundColor, value: NSColor.systemRed, range: nsRange)
+        }
+
+        item.attributedTitle = attributedTitle
     }
 }

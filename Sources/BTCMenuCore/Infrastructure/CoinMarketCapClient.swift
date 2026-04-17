@@ -1,6 +1,6 @@
 import Foundation
 
-struct BTCQuote: Decodable {
+private struct CurrencyQuote: Decodable {
     let price: Double
     let volume24h: Double
     let percentChange1h: Double?
@@ -17,11 +17,10 @@ struct BTCQuote: Decodable {
 }
 
 protocol BTCQuoteClient: Sendable {
-    func fetchBTCQuote(
+    func fetchQuoteSnapshot(
         apiKey: String?,
-        currency: Currency,
         preference: PriceSourcePreference
-    ) async throws -> BTCQuote
+    ) async throws -> QuoteSnapshot
 }
 
 struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
@@ -31,32 +30,31 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
         self.session = session
     }
 
-    func fetchBTCQuote(
+    func fetchQuoteSnapshot(
         apiKey: String?,
-        currency: Currency,
         preference: PriceSourcePreference
-    ) async throws -> BTCQuote {
+    ) async throws -> QuoteSnapshot {
         if preference == .coinMarketCap, let apiKey, !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            AppLogger.pricing.info("Request start: source=coinmarketcap currency=\(currency.rawValue, privacy: .public)")
+            AppLogger.pricing.info("Request start: source=coinmarketcap currencies=usd,brl")
             do {
-                let quote = try await fetchCoinMarketCapQuote(apiKey: apiKey, currency: currency)
+                let quote = try await fetchCoinMarketCapQuote(apiKey: apiKey)
                 AppLogger.pricing.info(
-                    "Request success: source=coinmarketcap currency=\(currency.rawValue, privacy: .public) price=\(quote.price, privacy: .public)"
+                    "Request success: source=coinmarketcap btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public)"
                 )
                 return quote
-            } catch let error as APIError where error.isRateLimited {
+            } catch let error as APIError where error.shouldFallbackToCoinGecko {
                 AppLogger.pricing.warning(
-                    "Request fallback: source=coinmarketcap currency=\(currency.rawValue, privacy: .public) reason=\(error.debugDescription, privacy: .public)"
+                    "Request fallback: source=coinmarketcap currencies=usd,brl reason=\(error.debugDescription, privacy: .public)"
                 )
-                AppLogger.pricing.info("Request start: source=coingecko currency=\(currency.rawValue, privacy: .public)")
-                let quote = try await fetchCoinGeckoQuote(currency: currency)
+                AppLogger.pricing.info("Request start: source=coingecko currencies=usd,brl")
+                let quote = try await fetchCoinGeckoQuote()
                 AppLogger.pricing.info(
-                    "Request success: source=coingecko currency=\(currency.rawValue, privacy: .public) price=\(quote.price, privacy: .public)"
+                    "Request success: source=coingecko btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public)"
                 )
                 return quote
             } catch {
                 AppLogger.pricing.error(
-                    "Request failure: source=coinmarketcap currency=\(currency.rawValue, privacy: .public) error=\(String(describing: error), privacy: .public)"
+                    "Request failure: source=coinmarketcap currencies=usd,brl error=\(String(describing: error), privacy: .public)"
                 )
                 throw error
             }
@@ -64,30 +62,30 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
 
         if preference == .coinMarketCap {
             AppLogger.pricing.warning(
-                "Request fallback: source=coinmarketcap currency=\(currency.rawValue, privacy: .public) reason=no_api_key_configured"
+                "Request fallback: source=coinmarketcap currencies=usd,brl reason=no_api_key_configured"
             )
         }
 
-        AppLogger.pricing.info("Request start: source=coingecko currency=\(currency.rawValue, privacy: .public)")
+        AppLogger.pricing.info("Request start: source=coingecko currencies=usd,brl")
         do {
-            let quote = try await fetchCoinGeckoQuote(currency: currency)
+            let quote = try await fetchCoinGeckoQuote()
             AppLogger.pricing.info(
-                "Request success: source=coingecko currency=\(currency.rawValue, privacy: .public) price=\(quote.price, privacy: .public)"
+                "Request success: source=coingecko btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public)"
             )
             return quote
         } catch {
             AppLogger.pricing.error(
-                "Request failure: source=coingecko currency=\(currency.rawValue, privacy: .public) error=\(String(describing: error), privacy: .public)"
+                "Request failure: source=coingecko currencies=usd,brl error=\(String(describing: error), privacy: .public)"
             )
             throw error
         }
     }
 
-    private func fetchCoinMarketCapQuote(apiKey: String, currency: Currency) async throws -> BTCQuote {
+    private func fetchCoinMarketCapQuote(apiKey: String) async throws -> QuoteSnapshot {
         var components = URLComponents(string: "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest")
         components?.queryItems = [
             URLQueryItem(name: "symbol", value: "BTC"),
-            URLQueryItem(name: "convert", value: currency.rawValue.uppercased()),
+            URLQueryItem(name: "convert", value: "USD,BRL"),
         ]
 
         guard let url = components?.url else {
@@ -113,14 +111,29 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
         }
 
         let decoded = try JSONDecoder().decode(CoinMarketCapResponse.self, from: data)
-        guard let quote = decoded.data["BTC"]?.quote[currency.rawValue.uppercased()] else {
+        guard
+            let quoteUSD = decoded.data["BTC"]?.quote["USD"],
+            let quoteBRL = decoded.data["BTC"]?.quote["BRL"]
+        else {
             throw APIError.missingQuote
         }
 
-        return quote
+        return QuoteSnapshot(
+            btcUSD: quoteUSD.price,
+            btcBRL: quoteBRL.price,
+            usdBRL: quoteBRL.price / quoteUSD.price,
+            btcUSDVolume24h: quoteUSD.volume24h,
+            btcBRLVolume24h: quoteBRL.volume24h,
+            btcUSDPercentChange1h: quoteUSD.percentChange1h,
+            btcBRLPercentChange1h: quoteBRL.percentChange1h,
+            btcUSDPercentChange3h: quoteUSD.percentChange3h,
+            btcBRLPercentChange3h: quoteBRL.percentChange3h,
+            btcUSDPercentChange24h: quoteUSD.percentChange24h,
+            btcBRLPercentChange24h: quoteBRL.percentChange24h
+        )
     }
 
-    private func fetchCoinGeckoQuote(currency: Currency) async throws -> BTCQuote {
+    private func fetchCoinGeckoQuote() async throws -> QuoteSnapshot {
         var components = URLComponents(string: "https://api.coingecko.com/api/v3/coins/bitcoin")
         components?.queryItems = [
             URLQueryItem(name: "localization", value: "false"),
@@ -154,15 +167,23 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
         let decoded = try JSONDecoder().decode(CoinGeckoResponse.self, from: data)
         let marketData = decoded.marketData
 
-        let price = try value(for: marketData.currentPrice, currency: currency)
-        let volume24h = try value(for: marketData.totalVolume, currency: currency)
+        let btcUSD = try value(for: marketData.currentPrice, currency: .usd)
+        let btcBRL = try value(for: marketData.currentPrice, currency: .brl)
+        let btcUSDVolume24h = try value(for: marketData.totalVolume, currency: .usd)
+        let btcBRLVolume24h = try value(for: marketData.totalVolume, currency: .brl)
 
-        return BTCQuote(
-            price: price,
-            volume24h: volume24h,
-            percentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: currency) },
-            percentChange3h: nil,
-            percentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: currency) }
+        return QuoteSnapshot(
+            btcUSD: btcUSD,
+            btcBRL: btcBRL,
+            usdBRL: btcBRL / btcUSD,
+            btcUSDVolume24h: btcUSDVolume24h,
+            btcBRLVolume24h: btcBRLVolume24h,
+            btcUSDPercentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            btcUSDPercentChange3h: nil,
+            btcBRLPercentChange3h: nil,
+            btcUSDPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .brl) }
         )
     }
 
@@ -222,6 +243,20 @@ extension APIError {
 
         return nil
     }
+
+    var shouldFallbackToCoinGecko: Bool {
+        if isRateLimited {
+            return true
+        }
+
+        if case let .invalidResponse(_, body) = self,
+           let body,
+           body.localizedCaseInsensitiveContains("limited to 1 convert options") {
+            return true
+        }
+
+        return false
+    }
 }
 
 private struct CoinMarketCapResponse: Decodable {
@@ -229,7 +264,7 @@ private struct CoinMarketCapResponse: Decodable {
 }
 
 private struct CoinMarketCapAsset: Decodable {
-    let quote: [String: BTCQuote]
+    let quote: [String: CurrencyQuote]
 }
 
 private struct CoinGeckoResponse: Decodable {
