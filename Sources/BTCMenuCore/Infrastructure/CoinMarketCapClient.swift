@@ -4,15 +4,17 @@ private struct CurrencyQuote: Decodable {
     let price: Double
     let volume24h: Double
     let percentChange1h: Double?
-    let percentChange3h: Double?
     let percentChange24h: Double?
+    let percentChange7d: Double?
+    let percentChange30d: Double?
 
     private enum CodingKeys: String, CodingKey {
         case price
         case volume24h = "volume_24h"
         case percentChange1h = "percent_change_1h"
-        case percentChange3h = "percent_change_3h"
         case percentChange24h = "percent_change_24h"
+        case percentChange7d = "percent_change_7d"
+        case percentChange30d = "percent_change_30d"
     }
 }
 
@@ -126,10 +128,12 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
             btcBRLVolume24h: quoteBRL.volume24h,
             btcUSDPercentChange1h: quoteUSD.percentChange1h,
             btcBRLPercentChange1h: quoteBRL.percentChange1h,
-            btcUSDPercentChange3h: quoteUSD.percentChange3h,
-            btcBRLPercentChange3h: quoteBRL.percentChange3h,
             btcUSDPercentChange24h: quoteUSD.percentChange24h,
-            btcBRLPercentChange24h: quoteBRL.percentChange24h
+            btcBRLPercentChange24h: quoteBRL.percentChange24h,
+            btcUSDPercentChange7d: quoteUSD.percentChange7d,
+            btcBRLPercentChange7d: quoteBRL.percentChange7d,
+            btcUSDPercentChange30d: quoteUSD.percentChange30d,
+            btcBRLPercentChange30d: quoteBRL.percentChange30d
         )
     }
 
@@ -180,10 +184,12 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
             btcBRLVolume24h: btcBRLVolume24h,
             btcUSDPercentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .usd) },
             btcBRLPercentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .brl) },
-            btcUSDPercentChange3h: nil,
-            btcBRLPercentChange3h: nil,
             btcUSDPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .usd) },
-            btcBRLPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .brl) }
+            btcBRLPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            btcUSDPercentChange7d: try? marketData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange7d: try? marketData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            btcUSDPercentChange30d: try? marketData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange30d: try? marketData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .brl) }
         )
     }
 
@@ -280,12 +286,16 @@ private struct CoinGeckoMarketData: Decodable {
     let totalVolume: [String: Double]
     let priceChangePercentage1hInCurrency: [String: Double]?
     let priceChangePercentage24hInCurrency: [String: Double]?
+    let priceChangePercentage7dInCurrency: [String: Double]?
+    let priceChangePercentage30dInCurrency: [String: Double]?
 
     private enum CodingKeys: String, CodingKey {
         case currentPrice = "current_price"
         case totalVolume = "total_volume"
         case priceChangePercentage1hInCurrency = "price_change_percentage_1h_in_currency"
         case priceChangePercentage24hInCurrency = "price_change_percentage_24h_in_currency"
+        case priceChangePercentage7dInCurrency = "price_change_percentage_7d_in_currency"
+        case priceChangePercentage30dInCurrency = "price_change_percentage_30d_in_currency"
     }
 }
 

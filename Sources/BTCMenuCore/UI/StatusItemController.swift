@@ -18,8 +18,9 @@ final class BTCStatusItemController: NSObject {
     private let manualUpdateItem = NSMenuItem()
     private let lastUpdateItem = NSMenuItem()
     private let change1hItem = NSMenuItem()
-    private let change3hItem = NSMenuItem()
     private let change24hItem = NSMenuItem()
+    private let change7dItem = NSMenuItem()
+    private let change30dItem = NSMenuItem()
     private let volumeItem = NSMenuItem()
     private let sourceItem = NSMenuItem()
     private let errorItem = NSMenuItem()
@@ -67,8 +68,9 @@ final class BTCStatusItemController: NSObject {
         statusItem.button?.toolTip = state.statusTitle
         lastUpdateItem.title = state.lastUpdateDescription
         applyChangeTitle(change1hItem, title: state.change1hDescription)
-        applyChangeTitle(change3hItem, title: state.change3hDescription)
         applyChangeTitle(change24hItem, title: state.change24hDescription)
+        applyChangeTitle(change7dItem, title: state.change7dDescription)
+        applyChangeTitle(change30dItem, title: state.change30dDescription)
         volumeItem.title = state.volumeDescription
         sourceItem.title = state.priceSourceDescription
         errorItem.title = state.errorTitle
@@ -92,8 +94,9 @@ final class BTCStatusItemController: NSObject {
 
         lastUpdateItem.isEnabled = false
         change1hItem.isEnabled = false
-        change3hItem.isEnabled = false
         change24hItem.isEnabled = false
+        change7dItem.isEnabled = false
+        change30dItem.isEnabled = false
         volumeItem.isEnabled = false
         sourceItem.isEnabled = false
         errorItem.isEnabled = false
@@ -146,8 +149,9 @@ final class BTCStatusItemController: NSObject {
             .separator(),
             lastUpdateItem,
             change1hItem,
-            change3hItem,
             change24hItem,
+            change7dItem,
+            change30dItem,
             volumeItem,
             sourceItem,
             errorItem,

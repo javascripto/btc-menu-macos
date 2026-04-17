@@ -22,10 +22,12 @@ struct QuoteSnapshot: Equatable {
     let btcBRLVolume24h: Double
     let btcUSDPercentChange1h: Double?
     let btcBRLPercentChange1h: Double?
-    let btcUSDPercentChange3h: Double?
-    let btcBRLPercentChange3h: Double?
     let btcUSDPercentChange24h: Double?
     let btcBRLPercentChange24h: Double?
+    let btcUSDPercentChange7d: Double?
+    let btcBRLPercentChange7d: Double?
+    let btcUSDPercentChange30d: Double?
+    let btcBRLPercentChange30d: Double?
 
     func primaryBTCQuote() -> PrimaryBTCQuote {
         PrimaryBTCQuote(
@@ -33,8 +35,9 @@ struct QuoteSnapshot: Equatable {
             price: btcBRL,
             volume24h: btcBRLVolume24h,
             percentChange1h: btcBRLPercentChange1h,
-            percentChange3h: btcBRLPercentChange3h,
-            percentChange24h: btcBRLPercentChange24h
+            percentChange24h: btcBRLPercentChange24h,
+            percentChange7d: btcBRLPercentChange7d,
+            percentChange30d: btcBRLPercentChange30d
         )
     }
 }
@@ -44,8 +47,9 @@ struct PrimaryBTCQuote {
     let price: Double
     let volume24h: Double
     let percentChange1h: Double?
-    let percentChange3h: Double?
     let percentChange24h: Double?
+    let percentChange7d: Double?
+    let percentChange30d: Double?
 }
 
 struct QuoteMovements: Equatable {

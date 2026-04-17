@@ -25,8 +25,9 @@ final class BTCMenuViewModel {
     private var lastFetchDate: Date?
     private var lastUpdateDescription = "Última atualização: --:--"
     private var change1hDescription = "Variação 1h: --"
-    private var change3hDescription = "Variação 3h: --"
     private var change24hDescription = "Variação 24h: --"
+    private var change7dDescription = "Variação 7d: --"
+    private var change30dDescription = "Variação 30d: --"
     private var volumeDescription = "Volume 24h: --"
     private var lastErrorDescription: String?
     private var storedLastErrorDetails: ErrorDetails?
@@ -139,8 +140,9 @@ final class BTCMenuViewModel {
         let primaryQuote = quote.primaryBTCQuote()
         statusTitle = StatusTitleBuilder.build(snapshot: quote, options: currentDisplayOptions, movements: quoteMovements)
         change1hDescription = "Variação 1h: \(Formatting.change(primaryQuote.percentChange1h))"
-        change3hDescription = "Variação 3h: \(Formatting.change(primaryQuote.percentChange3h))"
         change24hDescription = "Variação 24h: \(Formatting.change(primaryQuote.percentChange24h))"
+        change7dDescription = "Variação 7d: \(Formatting.change(primaryQuote.percentChange7d))"
+        change30dDescription = "Variação 30d: \(Formatting.change(primaryQuote.percentChange30d))"
         volumeDescription = "Volume 24h: $\(Formatting.volume(quote.btcUSDVolume24h))"
         lastUpdateDescription = "Última atualização: \(Formatting.time(Date()))"
         lastErrorDescription = nil
@@ -168,6 +170,9 @@ final class BTCMenuViewModel {
             guard triggered else { return }
 
             let arrow = config.priceDirection == .above ? "↑" : "↓"
+            AppLogger.alerts.info(
+                "Price alert triggered: direction=\(config.priceDirection.rawValue, privacy: .public) current=\(quote.price, privacy: .public) target=\(target, privacy: .public) currency=\(quote.currency.rawValue, privacy: .public)"
+            )
             alertService.notify(
                 title: "BTCMenu",
                 message: "Alerta de preço \(arrow): \(String(format: "%.2f", quote.price)) \(quote.currency.rawValue.uppercased())"
@@ -186,15 +191,20 @@ final class BTCMenuViewModel {
             switch config.variationWindow {
             case .oneHour:
                 currentVariation = quote.percentChange1h
-            case .threeHours:
-                currentVariation = quote.percentChange3h
             case .twentyFourHours:
                 currentVariation = quote.percentChange24h
+            case .sevenDays:
+                currentVariation = quote.percentChange7d
+            case .thirtyDays:
+                currentVariation = quote.percentChange30d
             }
 
             guard let currentVariation, abs(currentVariation) >= config.variationThreshold else { return }
 
             let direction = currentVariation >= 0 ? "↑" : "↓"
+            AppLogger.alerts.info(
+                "Variation alert triggered: window=\(config.variationWindow.rawValue, privacy: .public) current=\(currentVariation, privacy: .public) threshold=\(config.variationThreshold, privacy: .public)"
+            )
             alertService.notify(
                 title: "BTCMenu",
                 message: "Variação \(config.variationWindow.rawValue) \(direction) \(String(format: "%.2f", currentVariation))% (limite \(String(format: "%.1f", config.variationThreshold))%)"
@@ -216,8 +226,9 @@ final class BTCMenuViewModel {
             launchesAtLogin: launchAtLoginController.launchesAtLogin,
             lastUpdateDescription: lastUpdateDescription,
             change1hDescription: change1hDescription,
-            change3hDescription: change3hDescription,
             change24hDescription: change24hDescription,
+            change7dDescription: change7dDescription,
+            change30dDescription: change30dDescription,
             volumeDescription: volumeDescription,
             priceSourceDescription: "Fonte de preco: \(priceSourcePreference.title)",
             lastErrorDescription: lastErrorDescription,

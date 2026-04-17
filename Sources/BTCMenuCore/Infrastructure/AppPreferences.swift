@@ -40,8 +40,9 @@ enum PriceDirection: String {
 
 enum VariationWindow: String, CaseIterable {
     case oneHour = "1h"
-    case threeHours = "3h"
     case twentyFourHours = "24h"
+    case sevenDays = "7d"
+    case thirtyDays = "30d"
 }
 
 struct AlertConfiguration {

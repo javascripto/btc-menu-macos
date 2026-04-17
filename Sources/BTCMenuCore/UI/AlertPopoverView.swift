@@ -65,7 +65,7 @@ struct AlertPopoverView: View {
                             Text(window.rawValue).tag(window)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {

@@ -24,8 +24,9 @@ struct BTCMenuState {
     let launchesAtLogin: Bool
     let lastUpdateDescription: String
     let change1hDescription: String
-    let change3hDescription: String
     let change24hDescription: String
+    let change7dDescription: String
+    let change30dDescription: String
     let volumeDescription: String
     let priceSourceDescription: String
     let lastErrorDescription: String?

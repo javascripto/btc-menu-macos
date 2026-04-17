@@ -15,7 +15,14 @@ final class AlertService: AlertServicing {
     private let center = UNUserNotificationCenter.current()
 
     init() {
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error {
+                AppLogger.alerts.error("Notification authorization failed: \(String(describing: error), privacy: .public)")
+                return
+            }
+
+            AppLogger.alerts.info("Notification authorization granted=\(granted, privacy: .public)")
+        }
     }
 
     func notify(title: String, message: String) {
@@ -29,7 +36,14 @@ final class AlertService: AlertServicing {
             content: content,
             trigger: nil
         )
-        center.add(request)
+        center.add(request) { error in
+            if let error {
+                AppLogger.alerts.error("Notification schedule failed: \(String(describing: error), privacy: .public)")
+                return
+            }
+
+            AppLogger.alerts.info("Notification scheduled: \(title, privacy: .public) | \(message, privacy: .public)")
+        }
     }
 
     func beep() {

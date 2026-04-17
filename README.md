@@ -16,7 +16,7 @@ Menu bar app nativo para macOS, feito em Swift + AppKit, para acompanhar o preç
 - usa uma API pública sem exigir configuração inicial
 - usa CoinMarketCap quando a API key estiver configurada
 - salva API key, opções de exibição e alertas em `UserDefaults`
-- dispara alertas por preço-alvo ou variação em `1h`, `3h` e `24h`
+- dispara alertas por preço-alvo ou variação em `1h`, `24h`, `7d` e `30d`
 
 ## Requisitos
 
