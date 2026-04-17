@@ -18,6 +18,7 @@ final class BTCMenuViewModel {
     private let launchAtLoginController: LaunchAtLoginControlling
 
     private var currentDisplayOptions: DisplayOptions
+    private var priceHistory: [PriceSample]
     private var latestSnapshot: QuoteSnapshot?
     private var previousBTCUSD: Double?
     private var previousBTCBRL: Double?
@@ -46,6 +47,7 @@ final class BTCMenuViewModel {
         self.alertService = alertService
         self.launchAtLoginController = launchAtLoginController
         self.currentDisplayOptions = preferences.displayOptions
+        self.priceHistory = preferences.priceHistory
     }
 
     func start() async {
@@ -136,6 +138,7 @@ final class BTCMenuViewModel {
         previousBTCUSD = quote.btcUSD
         previousBTCBRL = quote.btcBRL
         previousUSDBRL = quote.usdBRL
+        appendPriceSample(price: quote.btcBRL, at: Date())
 
         let primaryQuote = quote.primaryBTCQuote()
         statusTitle = StatusTitleBuilder.build(snapshot: quote, options: currentDisplayOptions, movements: quoteMovements)
@@ -187,17 +190,7 @@ final class BTCMenuViewModel {
             }
 
         case .variation:
-            let currentVariation: Double?
-            switch config.variationWindow {
-            case .oneHour:
-                currentVariation = quote.percentChange1h
-            case .twentyFourHours:
-                currentVariation = quote.percentChange24h
-            case .sevenDays:
-                currentVariation = quote.percentChange7d
-            case .thirtyDays:
-                currentVariation = quote.percentChange30d
-            }
+            let currentVariation = variationOverWindow(config.variationWindow, currentPrice: quote.price)
 
             guard let currentVariation, abs(currentVariation) >= config.variationThreshold else { return }
 
@@ -259,6 +252,20 @@ final class BTCMenuViewModel {
         if currentValue > previousValue { return .up }
         if currentValue < previousValue { return .down }
         return .unchanged
+    }
+
+    private func appendPriceSample(price: Double, at timestamp: Date) {
+        priceHistory.append(PriceSample(timestamp: timestamp, btcBRL: price))
+        let oldestAllowed = timestamp.addingTimeInterval(-(2 * 60 * 60))
+        priceHistory.removeAll { $0.timestamp < oldestAllowed }
+        preferences.priceHistory = priceHistory
+    }
+
+    private func variationOverWindow(_ window: AlertVariationWindow, currentPrice: Double) -> Double? {
+        let cutoff = Date().addingTimeInterval(-window.interval)
+        guard let sample = priceHistory.last(where: { $0.timestamp <= cutoff }) else { return nil }
+        guard sample.btcBRL > 0 else { return nil }
+        return ((currentPrice - sample.btcBRL) / sample.btcBRL) * 100
     }
 
     private static func details(for error: Error) -> ErrorDetails {

@@ -5,7 +5,7 @@ struct AlertPopoverView: View {
     @State private var priceDirection: PriceDirection
     @State private var priceTargetText: String
     @State private var priceRepeat: Bool
-    @State private var variationWindow: VariationWindow
+    @State private var variationWindow: AlertVariationWindow
     @State private var variationThreshold: Double
 
     let onSave: (AlertConfiguration) -> Void
@@ -61,7 +61,7 @@ struct AlertPopoverView: View {
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     Picker("Janela", selection: $variationWindow) {
-                        ForEach(VariationWindow.allCases, id: \.self) { window in
+                        ForEach(AlertVariationWindow.allCases, id: \.self) { window in
                             Text(window.rawValue).tag(window)
                         }
                     }
