@@ -22,6 +22,8 @@ final class BTCMenuViewModel {
     private var latestSnapshot: QuoteSnapshot?
     private var previousBTCUSD: Double?
     private var previousBTCBRL: Double?
+    private var previousETHUSD: Double?
+    private var previousETHBRL: Double?
     private var previousUSDBRL: Double?
     private var lastFetchDate: Date?
     private var lastUpdateDescription = "Última atualização: --:--"
@@ -33,7 +35,7 @@ final class BTCMenuViewModel {
     private var lastErrorDescription: String?
     private var storedLastErrorDetails: ErrorDetails?
     private var statusTitle = "--"
-    private var quoteMovements = QuoteMovements(btcUSD: .unchanged, btcBRL: .unchanged, usdBRL: .unchanged)
+    private var quoteMovements = QuoteMovements(btcUSD: .unchanged, btcBRL: .unchanged, ethUSD: .unchanged, ethBRL: .unchanged, usdBRL: .unchanged)
     private var isFetching = false
 
     init(
@@ -133,12 +135,16 @@ final class BTCMenuViewModel {
         quoteMovements = QuoteMovements(
             btcUSD: Self.movement(for: quote.btcUSD, previous: previousBTCUSD),
             btcBRL: Self.movement(for: quote.btcBRL, previous: previousBTCBRL),
+            ethUSD: Self.movement(for: quote.ethUSD, previous: previousETHUSD),
+            ethBRL: Self.movement(for: quote.ethBRL, previous: previousETHBRL),
             usdBRL: Self.movement(for: quote.usdBRL, previous: previousUSDBRL, roundedTo: 2)
         )
         previousBTCUSD = quote.btcUSD
         previousBTCBRL = quote.btcBRL
+        previousETHUSD = quote.ethUSD
+        previousETHBRL = quote.ethBRL
         previousUSDBRL = quote.usdBRL
-        appendPriceSample(price: quote.btcBRL, at: Date())
+        appendPriceSample(price: quote.btcBRL, ethPrice: quote.ethBRL, at: Date())
 
         let primaryQuote = quote.primaryBTCQuote()
         statusTitle = StatusTitleBuilder.build(snapshot: quote, options: currentDisplayOptions, movements: quoteMovements)
@@ -254,8 +260,8 @@ final class BTCMenuViewModel {
         return .unchanged
     }
 
-    private func appendPriceSample(price: Double, at timestamp: Date) {
-        priceHistory.append(PriceSample(timestamp: timestamp, btcBRL: price))
+    private func appendPriceSample(price: Double, ethPrice: Double, at timestamp: Date) {
+        priceHistory.append(PriceSample(timestamp: timestamp, btcBRL: price, ethBRL: ethPrice))
         let oldestAllowed = timestamp.addingTimeInterval(-(2 * 60 * 60))
         priceHistory.removeAll { $0.timestamp < oldestAllowed }
         preferences.priceHistory = priceHistory

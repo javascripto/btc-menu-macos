@@ -7,6 +7,7 @@ final class BTCStatusItemController: NSObject {
     private let onToggleDollarRate: () -> Void
     private let onToggleBitcoinUSD: () -> Void
     private let onToggleBitcoinBRL: () -> Void
+    private let onToggleEthereumUSD: () -> Void
     private let onToggleBitcoinCents: () -> Void
     private let onConfigureAlert: () -> Void
     private let onConfigureAPIKey: () -> Void
@@ -29,6 +30,7 @@ final class BTCStatusItemController: NSObject {
     private let dollarRateItem = NSMenuItem()
     private let bitcoinUSDItem = NSMenuItem()
     private let bitcoinBRLItem = NSMenuItem()
+    private let ethereumUSDItem = NSMenuItem()
     private let bitcoinCentsItem = NSMenuItem()
     private let alertItem = NSMenuItem()
     private let apiKeyItem = NSMenuItem()
@@ -41,6 +43,7 @@ final class BTCStatusItemController: NSObject {
         onToggleDollarRate: @escaping () -> Void,
         onToggleBitcoinUSD: @escaping () -> Void,
         onToggleBitcoinBRL: @escaping () -> Void,
+        onToggleEthereumUSD: @escaping () -> Void,
         onToggleBitcoinCents: @escaping () -> Void,
         onConfigureAlert: @escaping () -> Void,
         onConfigureAPIKey: @escaping () -> Void,
@@ -53,6 +56,7 @@ final class BTCStatusItemController: NSObject {
         self.onToggleDollarRate = onToggleDollarRate
         self.onToggleBitcoinUSD = onToggleBitcoinUSD
         self.onToggleBitcoinBRL = onToggleBitcoinBRL
+        self.onToggleEthereumUSD = onToggleEthereumUSD
         self.onToggleBitcoinCents = onToggleBitcoinCents
         self.onConfigureAlert = onConfigureAlert
         self.onConfigureAPIKey = onConfigureAPIKey
@@ -79,6 +83,7 @@ final class BTCStatusItemController: NSObject {
         dollarRateItem.state = state.displayOptions.showDollarRate ? .on : .off
         bitcoinUSDItem.state = state.displayOptions.showBitcoinUSD ? .on : .off
         bitcoinBRLItem.state = state.displayOptions.showBitcoinBRL ? .on : .off
+        ethereumUSDItem.state = state.displayOptions.showEthereumUSD ? .on : .off
         bitcoinCentsItem.state = state.displayOptions.showBitcoinCents ? .on : .off
         alertItem.title = state.alertTitle
         apiKeyItem.title = state.apiKeyTitle
@@ -118,12 +123,16 @@ final class BTCStatusItemController: NSObject {
         bitcoinBRLItem.target = self
         bitcoinBRLItem.action = #selector(handleBitcoinBRL)
 
+        ethereumUSDItem.title = "Ethereum em dólar"
+        ethereumUSDItem.target = self
+        ethereumUSDItem.action = #selector(handleEthereumUSD)
+
         bitcoinCentsItem.title = "Mostrar centavos do Bitcoin"
         bitcoinCentsItem.target = self
         bitcoinCentsItem.action = #selector(handleBitcoinCents)
 
         displayMenu.autoenablesItems = false
-        displayMenu.items = [dollarRateItem, bitcoinUSDItem, bitcoinBRLItem, .separator(), bitcoinCentsItem]
+        displayMenu.items = [dollarRateItem, bitcoinUSDItem, bitcoinBRLItem, ethereumUSDItem, .separator(), bitcoinCentsItem]
         displayMenuItem.submenu = displayMenu
 
         alertItem.target = self
@@ -176,6 +185,9 @@ final class BTCStatusItemController: NSObject {
 
     @objc
     private func handleBitcoinBRL() { onToggleBitcoinBRL() }
+
+    @objc
+    private func handleEthereumUSD() { onToggleEthereumUSD() }
 
     @objc
     private func handleBitcoinCents() { onToggleBitcoinCents() }

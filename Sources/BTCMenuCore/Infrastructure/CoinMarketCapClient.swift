@@ -41,7 +41,7 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
             do {
                 let quote = try await fetchCoinMarketCapQuote(apiKey: apiKey)
                 AppLogger.pricing.info(
-                    "Request success: source=coinmarketcap btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public)"
+                    "Request success: source=coinmarketcap btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public) ethUSD=\(quote.ethUSD, privacy: .public) ethBRL=\(quote.ethBRL, privacy: .public)"
                 )
                 return quote
             } catch let error as APIError where error.shouldFallbackToCoinGecko {
@@ -51,7 +51,7 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
                 AppLogger.pricing.info("Request start: source=coingecko currencies=usd,brl")
                 let quote = try await fetchCoinGeckoQuote()
                 AppLogger.pricing.info(
-                    "Request success: source=coingecko btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public)"
+                    "Request success: source=coingecko btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public) ethUSD=\(quote.ethUSD, privacy: .public) ethBRL=\(quote.ethBRL, privacy: .public)"
                 )
                 return quote
             } catch {
@@ -72,7 +72,7 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
         do {
             let quote = try await fetchCoinGeckoQuote()
             AppLogger.pricing.info(
-                "Request success: source=coingecko btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public)"
+                "Request success: source=coingecko btcUSD=\(quote.btcUSD, privacy: .public) btcBRL=\(quote.btcBRL, privacy: .public) ethUSD=\(quote.ethUSD, privacy: .public) ethBRL=\(quote.ethBRL, privacy: .public)"
             )
             return quote
         } catch {
@@ -86,7 +86,7 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
     private func fetchCoinMarketCapQuote(apiKey: String) async throws -> QuoteSnapshot {
         var components = URLComponents(string: "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest")
         components?.queryItems = [
-            URLQueryItem(name: "symbol", value: "BTC"),
+            URLQueryItem(name: "symbol", value: "BTC,ETH"),
             URLQueryItem(name: "convert", value: "USD,BRL"),
         ]
 
@@ -120,25 +120,114 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
             throw APIError.missingQuote
         }
 
+        var ethUSD: Double = 0
+        var ethBRL: Double = 0
+        var ethUSDVolume24h: Double = 0
+        var ethBRLVolume24h: Double = 0
+        var ethUSDPercentChange1h: Double? = nil
+        var ethBRLPercentChange1h: Double? = nil
+        var ethUSDPercentChange24h: Double? = nil
+        var ethBRLPercentChange24h: Double? = nil
+        var ethUSDPercentChange7d: Double? = nil
+        var ethBRLPercentChange7d: Double? = nil
+        var ethUSDPercentChange30d: Double? = nil
+        var ethBRLPercentChange30d: Double? = nil
+
+        if let ethQuoteUSD = decoded.data["ETH"]?.quote["USD"],
+           let ethQuoteBRL = decoded.data["ETH"]?.quote["BRL"] {
+            ethUSD = ethQuoteUSD.price
+            ethBRL = ethQuoteBRL.price
+            ethUSDVolume24h = ethQuoteUSD.volume24h
+            ethBRLVolume24h = ethQuoteBRL.volume24h
+            ethUSDPercentChange1h = ethQuoteUSD.percentChange1h
+            ethBRLPercentChange1h = ethQuoteBRL.percentChange1h
+            ethUSDPercentChange24h = ethQuoteUSD.percentChange24h
+            ethBRLPercentChange24h = ethQuoteBRL.percentChange24h
+            ethUSDPercentChange7d = ethQuoteUSD.percentChange7d
+            ethBRLPercentChange7d = ethQuoteBRL.percentChange7d
+            ethUSDPercentChange30d = ethQuoteUSD.percentChange30d
+            ethBRLPercentChange30d = ethQuoteBRL.percentChange30d
+        } else {
+            AppLogger.pricing.warning("Ethereum quote not found in CoinMarketCap response")
+        }
+
         return QuoteSnapshot(
             btcUSD: quoteUSD.price,
             btcBRL: quoteBRL.price,
+            ethUSD: ethUSD,
+            ethBRL: ethBRL,
             usdBRL: quoteBRL.price / quoteUSD.price,
             btcUSDVolume24h: quoteUSD.volume24h,
             btcBRLVolume24h: quoteBRL.volume24h,
+            ethUSDVolume24h: ethUSDVolume24h,
+            ethBRLVolume24h: ethBRLVolume24h,
             btcUSDPercentChange1h: quoteUSD.percentChange1h,
             btcBRLPercentChange1h: quoteBRL.percentChange1h,
+            ethUSDPercentChange1h: ethUSDPercentChange1h,
+            ethBRLPercentChange1h: ethBRLPercentChange1h,
             btcUSDPercentChange24h: quoteUSD.percentChange24h,
             btcBRLPercentChange24h: quoteBRL.percentChange24h,
+            ethUSDPercentChange24h: ethUSDPercentChange24h,
+            ethBRLPercentChange24h: ethBRLPercentChange24h,
             btcUSDPercentChange7d: quoteUSD.percentChange7d,
             btcBRLPercentChange7d: quoteBRL.percentChange7d,
+            ethUSDPercentChange7d: ethUSDPercentChange7d,
+            ethBRLPercentChange7d: ethBRLPercentChange7d,
             btcUSDPercentChange30d: quoteUSD.percentChange30d,
-            btcBRLPercentChange30d: quoteBRL.percentChange30d
+            btcBRLPercentChange30d: quoteBRL.percentChange30d,
+            ethUSDPercentChange30d: ethUSDPercentChange30d,
+            ethBRLPercentChange30d: ethBRLPercentChange30d
         )
     }
 
     private func fetchCoinGeckoQuote() async throws -> QuoteSnapshot {
-        var components = URLComponents(string: "https://api.coingecko.com/api/v3/coins/bitcoin")
+        async let bitcoinRequest = fetchCoinGeckoCryptoPrices(cryptoId: "bitcoin")
+        async let ethereumRequest = fetchCoinGeckoCryptoPrices(cryptoId: "ethereum")
+
+        let bitcoinData = try await bitcoinRequest
+        let ethereumData = try await ethereumRequest
+
+        let btcUSD = try value(for: bitcoinData.currentPrice, currency: .usd)
+        let btcBRL = try value(for: bitcoinData.currentPrice, currency: .brl)
+        let btcUSDVolume24h = try value(for: bitcoinData.totalVolume, currency: .usd)
+        let btcBRLVolume24h = try value(for: bitcoinData.totalVolume, currency: .brl)
+
+        let ethUSD = try value(for: ethereumData.currentPrice, currency: .usd)
+        let ethBRL = try value(for: ethereumData.currentPrice, currency: .brl)
+        let ethUSDVolume24h = try value(for: ethereumData.totalVolume, currency: .usd)
+        let ethBRLVolume24h = try value(for: ethereumData.totalVolume, currency: .brl)
+
+        return QuoteSnapshot(
+            btcUSD: btcUSD,
+            btcBRL: btcBRL,
+            ethUSD: ethUSD,
+            ethBRL: ethBRL,
+            usdBRL: btcBRL / btcUSD,
+            btcUSDVolume24h: btcUSDVolume24h,
+            btcBRLVolume24h: btcBRLVolume24h,
+            ethUSDVolume24h: ethUSDVolume24h,
+            ethBRLVolume24h: ethBRLVolume24h,
+            btcUSDPercentChange1h: try? bitcoinData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange1h: try? bitcoinData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            ethUSDPercentChange1h: try? ethereumData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            ethBRLPercentChange1h: try? ethereumData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            btcUSDPercentChange24h: try? bitcoinData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange24h: try? bitcoinData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            ethUSDPercentChange24h: try? ethereumData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            ethBRLPercentChange24h: try? ethereumData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            btcUSDPercentChange7d: try? bitcoinData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange7d: try? bitcoinData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            ethUSDPercentChange7d: try? ethereumData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            ethBRLPercentChange7d: try? ethereumData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            btcUSDPercentChange30d: try? bitcoinData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            btcBRLPercentChange30d: try? bitcoinData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .brl) },
+            ethUSDPercentChange30d: try? ethereumData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .usd) },
+            ethBRLPercentChange30d: try? ethereumData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .brl) }
+        )
+    }
+
+    private func fetchCoinGeckoCryptoPrices(cryptoId: String) async throws -> CoinGeckoMarketData {
+        var components = URLComponents(string: "https://api.coingecko.com/api/v3/coins/\(cryptoId)")
         components?.queryItems = [
             URLQueryItem(name: "localization", value: "false"),
             URLQueryItem(name: "tickers", value: "false"),
@@ -169,28 +258,7 @@ struct LiveBTCQuoteClient: BTCQuoteClient, Sendable {
         }
 
         let decoded = try JSONDecoder().decode(CoinGeckoResponse.self, from: data)
-        let marketData = decoded.marketData
-
-        let btcUSD = try value(for: marketData.currentPrice, currency: .usd)
-        let btcBRL = try value(for: marketData.currentPrice, currency: .brl)
-        let btcUSDVolume24h = try value(for: marketData.totalVolume, currency: .usd)
-        let btcBRLVolume24h = try value(for: marketData.totalVolume, currency: .brl)
-
-        return QuoteSnapshot(
-            btcUSD: btcUSD,
-            btcBRL: btcBRL,
-            usdBRL: btcBRL / btcUSD,
-            btcUSDVolume24h: btcUSDVolume24h,
-            btcBRLVolume24h: btcBRLVolume24h,
-            btcUSDPercentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .usd) },
-            btcBRLPercentChange1h: try? marketData.priceChangePercentage1hInCurrency.flatMap { try value(for: $0, currency: .brl) },
-            btcUSDPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .usd) },
-            btcBRLPercentChange24h: try? marketData.priceChangePercentage24hInCurrency.flatMap { try value(for: $0, currency: .brl) },
-            btcUSDPercentChange7d: try? marketData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .usd) },
-            btcBRLPercentChange7d: try? marketData.priceChangePercentage7dInCurrency.flatMap { try value(for: $0, currency: .brl) },
-            btcUSDPercentChange30d: try? marketData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .usd) },
-            btcBRLPercentChange30d: try? marketData.priceChangePercentage30dInCurrency.flatMap { try value(for: $0, currency: .brl) }
-        )
+        return decoded.marketData
     }
 
     private func value(for dictionary: [String: Double], currency: Currency) throws -> Double {
@@ -224,7 +292,7 @@ extension APIError: CustomStringConvertible, CustomDebugStringConvertible {
             }
             return "Resposta inválida da API (\(statusPart))\(bodyPart)"
         case .missingQuote:
-            return "Cotação BTC não encontrada na resposta da API"
+            return "Cotação BTC/ETH não encontrada na resposta da API"
         }
     }
 }
