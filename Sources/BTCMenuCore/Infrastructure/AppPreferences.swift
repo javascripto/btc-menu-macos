@@ -94,6 +94,7 @@ final class AppPreferences {
         static let showDollarRate = "show_dollar_rate"
         static let showBitcoinUSD = "show_bitcoin_usd"
         static let showBitcoinBRL = "show_bitcoin_brl"
+        static let showEthereumUSD = "show_ethereum_usd"
         static let showBitcoinCents = "show_bitcoin_cents"
         static let priceHistory = "price_history"
         static let alertEnabled = "alert_enabled"
@@ -129,7 +130,7 @@ final class AppPreferences {
 
             guard hasDisplayKeys else {
                 if currency == .brl {
-                    return DisplayOptions(showDollarRate: false, showBitcoinUSD: false, showBitcoinBRL: true, showBitcoinCents: false)
+                    return DisplayOptions(showDollarRate: false, showBitcoinUSD: false, showBitcoinBRL: true, showEthereumUSD: true, showBitcoinCents: false)
                 }
 
                 return .default
@@ -139,6 +140,7 @@ final class AppPreferences {
                 showDollarRate: userDefaults.bool(forKey: Keys.showDollarRate),
                 showBitcoinUSD: userDefaults.bool(forKey: Keys.showBitcoinUSD),
                 showBitcoinBRL: userDefaults.bool(forKey: Keys.showBitcoinBRL),
+                showEthereumUSD: userDefaults.object(forKey: Keys.showEthereumUSD) == nil ? true : userDefaults.bool(forKey: Keys.showEthereumUSD),
                 showBitcoinCents: userDefaults.bool(forKey: Keys.showBitcoinCents)
             )
         }
@@ -146,6 +148,7 @@ final class AppPreferences {
             userDefaults.set(newValue.showDollarRate, forKey: Keys.showDollarRate)
             userDefaults.set(newValue.showBitcoinUSD, forKey: Keys.showBitcoinUSD)
             userDefaults.set(newValue.showBitcoinBRL, forKey: Keys.showBitcoinBRL)
+            userDefaults.set(newValue.showEthereumUSD, forKey: Keys.showEthereumUSD)
             userDefaults.set(newValue.showBitcoinCents, forKey: Keys.showBitcoinCents)
         }
     }

@@ -40,6 +40,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     await viewModel.setDisplayOptions(options)
                 }
             },
+            onToggleEthereumUSD: { [viewModel] in
+                Task {
+                    var options = viewModel.displayOptions
+                    options.showEthereumUSD.toggle()
+                    await viewModel.setDisplayOptions(options)
+                }
+            },
             onToggleBitcoinCents: { [viewModel] in
                 Task {
                     var options = viewModel.displayOptions
